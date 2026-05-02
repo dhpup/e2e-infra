@@ -11,9 +11,14 @@ PLATFORM_REPO_URL ?= https://github.com/dhpup/e2e-platform
 ## Full initial bootstrap: create first cluster, write kubeconfig, apply Terraform
 all: cluster kubeconfig infra
 
-## Create k3d cluster (CLUSTER_NAME=demo1 by default)
+## Create k3d cluster (CLUSTER_NAME=demo1 by default).
+## Traefik and metrics-server are disabled — not needed for this demo and
+## they consume enough memory to crowd out the Akuity agent on small hosts.
 cluster:
-	k3d cluster create $(CLUSTER_NAME) --wait
+	k3d cluster create $(CLUSTER_NAME) \
+	  --k3s-arg "--disable=traefik@server:*" \
+	  --k3s-arg "--disable=metrics-server@server:*" \
+	  --wait
 
 ## Write kubeconfig for a cluster to bootstrap/.kubeconfigs/<name>.yaml
 kubeconfig:
