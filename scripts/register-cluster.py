@@ -79,6 +79,8 @@ else:
             spec:
               steps:
               - task:
+                  name: provision-backend
+              - task:
                   name: promote-guestbook
         """)
     open(stages_path, "a").write(stage)
