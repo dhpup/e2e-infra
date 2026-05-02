@@ -78,7 +78,8 @@ else:
           promotionTemplate:
             spec:
               steps:
-              - task:
+              - if: ${{{{ ctx.targetFreight.origin.name == "guestbook" }}}}
+                task:
                   name: provision-backend
               - task:
                   name: promote-guestbook
