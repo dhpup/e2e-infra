@@ -1,3 +1,12 @@
+terraform {
+  required_providers {
+    akp = {
+      source  = "akuity/akp"
+      version = "~> 0.10"
+    }
+  }
+}
+
 # k3d binds its API server to 0.0.0.0 inside Docker; rewrite to 127.0.0.1
 # so the Terraform provider can reach it from the Mac host.
 locals {

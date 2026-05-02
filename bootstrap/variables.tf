@@ -12,7 +12,7 @@ variable "argocd_instance_name" {
 variable "argocd_version" {
   description = "ArgoCD version to deploy"
   type        = string
-  default     = "v2.13.4"
+  default     = "v3.3.9-ak.87"
 }
 
 variable "kargo_instance_name" {
@@ -24,7 +24,7 @@ variable "kargo_instance_name" {
 variable "kargo_version" {
   description = "Kargo version to deploy"
   type        = string
-  default     = "v1.4.0"
+  default     = "v1.10.1-ak.0"
 }
 
 variable "clusters" {
