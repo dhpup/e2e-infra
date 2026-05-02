@@ -1,0 +1,18 @@
+# Copy to terraform.tfvars and fill in your values.
+# Never commit terraform.tfvars — it is gitignored.
+
+org_name             = "your-akuity-org"
+argocd_instance_name = "e2e-argocd"
+kargo_instance_name  = "e2e-kargo"
+
+# Clusters to register. Each name must match a k3d cluster and have a
+# kubeconfig at bootstrap/.kubeconfigs/<name>.yaml.
+# To add a cluster: make add-cluster CLUSTER_NAME=<name>, then add it here.
+clusters = ["demo1"]
+
+# Which cluster handles Kargo workloads by default
+default_shard = "demo1"
+
+# Set via env var to avoid accidental commits:
+#   export TF_VAR_admin_password="yourpassword"
+# admin_password = "..."
