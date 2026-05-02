@@ -76,13 +76,20 @@ add-cluster:
 	@echo "  then run: make infra"
 	@echo ""
 
-## Tear down Terraform resources, then delete all k3d clusters
-destroy: destroy-infra destroy-cluster
+## Tear down Terraform resources then delete every cluster in bootstrap/.kubeconfigs/
+destroy: destroy-infra
+	@for cfg in $(KUBECONFIGS_DIR)/*.yaml; do \
+	  [ -f "$$cfg" ] || continue; \
+	  name=$$(basename $$cfg .yaml); \
+	  echo "Deleting cluster: $$name"; \
+	  k3d cluster delete $$name; \
+	  rm -f $$cfg; \
+	done
 
 destroy-infra:
 	cd $(TF_DIR) && terraform destroy -auto-approve
 
-## Delete a specific k3d cluster and its kubeconfig (CLUSTER_NAME=demo1 by default)
+## Delete a single cluster and its kubeconfig (CLUSTER_NAME=demo1 by default)
 destroy-cluster:
 	k3d cluster delete $(CLUSTER_NAME)
 	rm -f $(KUBECONFIGS_DIR)/$(CLUSTER_NAME).yaml
