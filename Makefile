@@ -7,7 +7,7 @@ KARGO_SERVER      ?= $(shell cd $(TF_DIR) && terraform output -raw kargo_url 2>/
 PLATFORM_REPO_URL  ?= https://github.com/dhpup/e2e-platform
 PLATFORM_REPO_PATH ?= ../e2e-platform
 
-.PHONY: all cluster kubeconfig infra bootstrap-apps kargo-creds add-cluster destroy destroy-infra destroy-cluster
+.PHONY: all cluster kubeconfig infra bootstrap-apps kargo-creds add-cluster register-cluster destroy destroy-infra destroy-cluster
 
 ## Full initial bootstrap: create first cluster, write kubeconfig, apply Terraform
 all: cluster kubeconfig infra
@@ -64,16 +64,22 @@ kargo-creds:
 	  --username "$(GITHUB_USER)" \
 	  --password "$(GITHUB_TOKEN)"
 
-## Add a new cluster to the fleet (fully automated):
-##   1. Creates the k3d cluster
-##   2. Writes its kubeconfig
-##   3. Updates terraform.tfvars, stages.yaml, project.yaml, and copies the env dir
-##   4. Commits the platform repo changes
-##   5. Applies Terraform to register the cluster with Akuity
+## Create a k3d cluster and write its kubeconfig — step 1 of adding a fleet cluster.
+## Follow with `make register-cluster` once you're ready to wire it into the pipeline.
 ## Usage: make add-cluster CLUSTER_NAME=demo2
 add-cluster:
 	$(MAKE) cluster CLUSTER_NAME=$(CLUSTER_NAME)
 	$(MAKE) kubeconfig CLUSTER_NAME=$(CLUSTER_NAME)
+	@echo ""
+	@echo "  Cluster '$(CLUSTER_NAME)' is ready."
+	@echo "  Run 'make register-cluster CLUSTER_NAME=$(CLUSTER_NAME)' to wire it into the pipeline."
+	@echo ""
+
+## Wire an existing cluster into the GitOps pipeline — step 2 of adding a fleet cluster.
+## Updates terraform.tfvars, stages.yaml, project.yaml, copies the env dir,
+## commits the platform repo, and applies Terraform.
+## Usage: make register-cluster CLUSTER_NAME=demo2
+register-cluster:
 	@echo "Registering $(CLUSTER_NAME) in platform repo..."
 	@python3 scripts/register-cluster.py $(CLUSTER_NAME) $(PLATFORM_REPO_PATH)
 	@cd $(PLATFORM_REPO_PATH) && \
@@ -82,10 +88,8 @@ add-cluster:
 	          apps/team-daniel/env/prod-$(CLUSTER_NAME)/ && \
 	  git commit -m "feat(kargo): add prod-$(CLUSTER_NAME) stage and env"
 	@echo ""
-	@echo "  Platform repo committed. Push e2e-platform when ready."
-	@echo "  Running terraform to register cluster with Akuity..."
+	@echo "  Platform repo committed. Push e2e-platform when ready, then run 'make infra'."
 	@echo ""
-	$(MAKE) infra
 
 ## Tear down Terraform resources then delete every cluster in bootstrap/.kubeconfigs/
 destroy: destroy-infra
