@@ -7,7 +7,7 @@ KARGO_SERVER      ?= $(shell cd $(TF_DIR) && terraform output -raw kargo_url 2>/
 PLATFORM_REPO_URL  ?= https://github.com/dhpup/e2e-platform
 PLATFORM_REPO_PATH ?= ../e2e-platform
 
-.PHONY: all cluster kubeconfig infra bootstrap-apps kargo-creds add-cluster register-cluster destroy destroy-infra destroy-cluster
+.PHONY: all cluster kubeconfig infra bootstrap-apps kargo-creds add-cluster register-cluster remove-cluster destroy destroy-infra destroy-cluster
 
 ## Full initial bootstrap: create first cluster, write kubeconfig, apply Terraform
 all: cluster kubeconfig infra
@@ -89,6 +89,28 @@ register-cluster:
 	  git commit -m "feat(kargo): add prod-$(CLUSTER_NAME) stage and env"
 	@echo ""
 	@echo "  Platform repo committed. Push e2e-platform when ready, then run 'make infra'."
+	@echo ""
+
+## Remove a cluster from the fleet pipeline and destroy it — full demo reset.
+## Removes the prod-CLUSTER_NAME stage, env dir, and tfvars entry, commits the
+## platform repo, deregisters from Akuity via Terraform, then deletes the k3d cluster.
+## Usage: make remove-cluster CLUSTER_NAME=demo2
+remove-cluster:
+	@echo "Deregistering $(CLUSTER_NAME) from platform repo..."
+	@python3 scripts/deregister-cluster.py $(CLUSTER_NAME) $(PLATFORM_REPO_PATH)
+	@cd $(PLATFORM_REPO_PATH) && \
+	  git add apps/team-daniel/kargo/stages.yaml \
+	          apps/team-daniel/kargo/project.yaml \
+	          apps/team-daniel/env/ && \
+	  git commit -m "feat(kargo): remove prod-$(CLUSTER_NAME) stage and env"
+	@echo ""
+	@echo "  Platform repo committed. Push e2e-platform when ready, then:"
+	@echo "  Removing from Akuity via Terraform..."
+	@echo ""
+	$(MAKE) infra
+	$(MAKE) destroy-cluster CLUSTER_NAME=$(CLUSTER_NAME)
+	@echo ""
+	@echo "  $(CLUSTER_NAME) removed. Run 'make add-cluster CLUSTER_NAME=$(CLUSTER_NAME)' to start fresh."
 	@echo ""
 
 ## Tear down Terraform resources then delete every cluster in bootstrap/.kubeconfigs/
