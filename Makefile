@@ -6,9 +6,10 @@ KUBECONFIGS_DIR := $(TF_DIR)/.kubeconfigs
 #   export ARGOCD_TOKEN=...          (admin token from ArgoCD UI → User Info)
 #   export PLATFORM_REPO_URL=...     (your fork of e2e-platform)
 ARGOCD_SERVER   ?= $(shell cd $(TF_DIR) && terraform output -raw argocd_url 2>/dev/null | sed 's|https://||')
-PLATFORM_REPO_URL ?= https://github.com/YOUR_ORG/e2e-platform
+KARGO_SERVER    ?= $(shell cd $(TF_DIR) && terraform output -raw kargo_url 2>/dev/null)
+PLATFORM_REPO_URL ?= https://github.com/dhpup/e2e-platform
 
-.PHONY: all cluster kubeconfig infra bootstrap-apps add-cluster destroy destroy-infra destroy-cluster
+.PHONY: all cluster kubeconfig infra bootstrap-apps kargo-creds add-cluster destroy destroy-infra destroy-cluster
 
 ## Full initial bootstrap: create first cluster, write kubeconfig, apply Terraform
 all: cluster kubeconfig infra
@@ -42,6 +43,20 @@ bootstrap-apps:
 	  --auto-prune \
 	  --self-heal \
 	  --upsert
+
+## Create Kargo Git credential for GitHub (run once after `make infra`).
+## Requires: GITHUB_USER and GITHUB_TOKEN env vars. Uses TF_VAR_admin_password for Kargo login.
+kargo-creds:
+	@test -n "$(GITHUB_USER)"           || (echo "ERROR: GITHUB_USER is not set"; exit 1)
+	@test -n "$(GITHUB_TOKEN)"          || (echo "ERROR: GITHUB_TOKEN is not set"; exit 1)
+	@test -n "$(TF_VAR_admin_password)" || (echo "ERROR: TF_VAR_admin_password is not set"; exit 1)
+	kargo login "$(KARGO_SERVER)" --username admin --password "$(TF_VAR_admin_password)"
+	kargo create credentials github-dhpup \
+	  --namespace kargo \
+	  --git \
+	  --repo-url 'https://github.com/dhpup/*' \
+	  --username "$(GITHUB_USER)" \
+	  --password "$(GITHUB_TOKEN)"
 
 ## Add a new cluster to the fleet:
 ##   1. Creates the k3d cluster
