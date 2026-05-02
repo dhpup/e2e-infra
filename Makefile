@@ -4,7 +4,8 @@ KUBECONFIGS_DIR := $(TF_DIR)/.kubeconfigs
 
 ARGOCD_SERVER     ?= $(shell cd $(TF_DIR) && terraform output -raw argocd_url 2>/dev/null | sed 's|https://||')
 KARGO_SERVER      ?= $(shell cd $(TF_DIR) && terraform output -raw kargo_url 2>/dev/null)
-PLATFORM_REPO_URL ?= https://github.com/dhpup/e2e-platform
+PLATFORM_REPO_URL  ?= https://github.com/dhpup/e2e-platform
+PLATFORM_REPO_PATH ?= ../e2e-platform
 
 .PHONY: all cluster kubeconfig infra bootstrap-apps kargo-creds add-cluster destroy destroy-infra destroy-cluster
 
@@ -63,18 +64,28 @@ kargo-creds:
 	  --username "$(GITHUB_USER)" \
 	  --password "$(GITHUB_TOKEN)"
 
-## Add a new cluster to the fleet:
+## Add a new cluster to the fleet (fully automated):
 ##   1. Creates the k3d cluster
 ##   2. Writes its kubeconfig
-##   3. Reminds you to add it to terraform.tfvars, then runs apply
+##   3. Updates terraform.tfvars, stages.yaml, project.yaml, and copies the env dir
+##   4. Commits the platform repo changes
+##   5. Applies Terraform to register the cluster with Akuity
+## Usage: make add-cluster CLUSTER_NAME=demo2
 add-cluster:
 	$(MAKE) cluster CLUSTER_NAME=$(CLUSTER_NAME)
 	$(MAKE) kubeconfig CLUSTER_NAME=$(CLUSTER_NAME)
+	@echo "Registering $(CLUSTER_NAME) in platform repo..."
+	@python3 scripts/register-cluster.py $(CLUSTER_NAME) $(PLATFORM_REPO_PATH)
+	@cd $(PLATFORM_REPO_PATH) && \
+	  git add apps/team-daniel/kargo/stages.yaml \
+	          apps/team-daniel/kargo/project.yaml \
+	          apps/team-daniel/env/prod-$(CLUSTER_NAME)/ && \
+	  git commit -m "feat(kargo): add prod-$(CLUSTER_NAME) stage and env"
 	@echo ""
-	@echo "  Cluster '$(CLUSTER_NAME)' is ready."
-	@echo "  Add \"$(CLUSTER_NAME)\" to the clusters set in bootstrap/terraform.tfvars,"
-	@echo "  then run: make infra"
+	@echo "  Platform repo committed. Push e2e-platform when ready."
+	@echo "  Running terraform to register cluster with Akuity..."
 	@echo ""
+	$(MAKE) infra
 
 ## Tear down Terraform resources then delete every cluster in bootstrap/.kubeconfigs/
 destroy: destroy-infra
