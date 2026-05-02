@@ -2,11 +2,8 @@ CLUSTER_NAME    ?= demo1
 TF_DIR          := bootstrap
 KUBECONFIGS_DIR := $(TF_DIR)/.kubeconfigs
 
-# Set these before running bootstrap-apps:
-#   export ARGOCD_TOKEN=...          (admin token from ArgoCD UI → User Info)
-#   export PLATFORM_REPO_URL=...     (your fork of e2e-platform)
-ARGOCD_SERVER   ?= $(shell cd $(TF_DIR) && terraform output -raw argocd_url 2>/dev/null | sed 's|https://||')
-KARGO_SERVER    ?= $(shell cd $(TF_DIR) && terraform output -raw kargo_url 2>/dev/null)
+ARGOCD_SERVER     ?= $(shell cd $(TF_DIR) && terraform output -raw argocd_url 2>/dev/null | sed 's|https://||')
+KARGO_SERVER      ?= $(shell cd $(TF_DIR) && terraform output -raw kargo_url 2>/dev/null)
 PLATFORM_REPO_URL ?= https://github.com/dhpup/e2e-platform
 
 .PHONY: all cluster kubeconfig infra bootstrap-apps kargo-creds add-cluster destroy destroy-infra destroy-cluster
@@ -28,12 +25,14 @@ infra:
 	cd $(TF_DIR) && terraform init -upgrade && terraform apply -auto-approve
 
 ## Seed ArgoCD with the app-of-apps (run once after `make all`).
-## Requires: ARGOCD_TOKEN and PLATFORM_REPO_URL env vars.
+## Uses TF_VAR_admin_password — no token needed.
 bootstrap-apps:
-	@test -n "$(ARGOCD_TOKEN)" || (echo "ERROR: ARGOCD_TOKEN is not set"; exit 1)
+	@test -n "$(TF_VAR_admin_password)" || (echo "ERROR: TF_VAR_admin_password is not set"; exit 1)
+	argocd login "$(ARGOCD_SERVER)" \
+	  --username admin \
+	  --password "$(TF_VAR_admin_password)" \
+	  --insecure
 	argocd app create app-of-apps \
-	  --server "$(ARGOCD_SERVER)" \
-	  --auth-token "$(ARGOCD_TOKEN)" \
 	  --repo "$(PLATFORM_REPO_URL)" \
 	  --path bootstrap \
 	  --dest-name in-cluster \
@@ -50,11 +49,12 @@ kargo-creds:
 	@test -n "$(GITHUB_USER)"           || (echo "ERROR: GITHUB_USER is not set"; exit 1)
 	@test -n "$(GITHUB_TOKEN)"          || (echo "ERROR: GITHUB_TOKEN is not set"; exit 1)
 	@test -n "$(TF_VAR_admin_password)" || (echo "ERROR: TF_VAR_admin_password is not set"; exit 1)
-	kargo login "$(KARGO_SERVER)" --username admin --password "$(TF_VAR_admin_password)"
-	kargo create credentials github-dhpup \
-	  --namespace kargo \
+	kargo login "$(KARGO_SERVER)" --admin --password "$(TF_VAR_admin_password)"
+	kargo create repo-credentials github-dhpup \
+	  --shared \
 	  --git \
-	  --repo-url 'https://github.com/dhpup/*' \
+	  --repo-url '^https://github\.com/dhpup/.*$$' \
+	  --regex \
 	  --username "$(GITHUB_USER)" \
 	  --password "$(GITHUB_TOKEN)"
 
