@@ -65,13 +65,7 @@ else:
           requestedFreight:
           - origin:
               kind: Warehouse
-              name: guestbook
-            sources:
-              stages:
-              - dev
-          - origin:
-              kind: Warehouse
-              name: features
+              name: team-daniel
             sources:
               stages:
               - dev
