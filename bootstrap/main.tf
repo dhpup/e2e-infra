@@ -30,7 +30,9 @@ resource "akp_kargo_instance" "kargo" {
   kargo = {
     spec = {
       version             = var.kargo_version
-      kargo_instance_spec = {}
+      kargo_instance_spec = {
+        promo_controller_enabled = true
+      }
     }
   }
   kargo_cm = {
