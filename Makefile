@@ -55,7 +55,7 @@ kargo-creds:
 	@test -n "$(GITHUB_USER)"           || (echo "ERROR: GITHUB_USER is not set"; exit 1)
 	@test -n "$(GITHUB_TOKEN)"          || (echo "ERROR: GITHUB_TOKEN is not set"; exit 1)
 	@test -n "$(TF_VAR_admin_password)" || (echo "ERROR: TF_VAR_admin_password is not set"; exit 1)
-	kargo login "$(KARGO_SERVER)" --admin --password "$(TF_VAR_admin_password)"
+	kargo login "$(KARGO_SERVER)" --admin --password "$(TF_VAR_admin_password)" --grpc-web
 	kargo create repo-credentials github-dhpup \
 	  --shared \
 	  --git \
@@ -63,14 +63,17 @@ kargo-creds:
 	  --regex \
 	  --username "$(GITHUB_USER)" \
 	  --password "$(GITHUB_TOKEN)" \
+	  --grpc-web \
 	  2>/dev/null || echo "  (github-dhpup credentials already exist, skipping)"
 	@ARGOCD_TOKEN=$$(argocd account generate-token --account admin) && \
-	kargo delete credentials argocd-refresh-token --project team-daniel 2>/dev/null || true && \
+	kargo delete credentials argocd-refresh-token \
+	  --namespace team-daniel --grpc-web 2>/dev/null || true && \
 	kargo create credentials argocd-refresh-token \
-	  --project team-daniel \
+	  --namespace team-daniel \
 	  --generic \
 	  --data url=https://$(ARGOCD_SERVER) \
-	  --data token=$$ARGOCD_TOKEN
+	  --data token=$$ARGOCD_TOKEN \
+	  --grpc-web
 
 ## Create a k3d cluster and write its kubeconfig — step 1 of adding a fleet cluster.
 ## Follow with `make register-cluster` once you're ready to wire it into the pipeline.
