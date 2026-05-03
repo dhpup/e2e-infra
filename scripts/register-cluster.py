@@ -39,6 +39,9 @@ if os.path.exists(target):
     print(f"  - env/prod-{cluster}/ already exists, skipping")
 else:
     shutil.copytree(template, target)
+    backend_tf = os.path.join(target, "backend.tf")
+    txt = open(backend_tf).read().replace("prod-demo1", f"prod-{cluster}")
+    open(backend_tf, "w").write(txt)
     print(f"  ✓ env/prod-{cluster}/ created from prod-demo1 template")
 
 # ── 3. stages.yaml ────────────────────────────────────────────────────────────
