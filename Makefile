@@ -63,6 +63,12 @@ kargo-creds:
 	  --regex \
 	  --username "$(GITHUB_USER)" \
 	  --password "$(GITHUB_TOKEN)"
+	@ARGOCD_TOKEN=$$(argocd account generate-token --account admin) && \
+	kargo create credentials argocd-refresh-token \
+	  --project team-daniel \
+	  --generic \
+	  --data url=https://$(ARGOCD_SERVER) \
+	  --data token=$$ARGOCD_TOKEN
 
 ## Create a k3d cluster and write its kubeconfig — step 1 of adding a fleet cluster.
 ## Follow with `make register-cluster` once you're ready to wire it into the pipeline.
