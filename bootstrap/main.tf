@@ -11,7 +11,7 @@ resource "akp_instance" "argocd" {
     }
   }
   argocd_cm = {
-    "accounts.admin" = "login, apiKey"
+    "accounts.admin" = "apiKey,login"
     "resource.customizations.health.argoproj.io_Application" = <<-EOT
       hs = {}
       hs.status = "Progressing"
