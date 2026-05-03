@@ -12,6 +12,21 @@ resource "akp_instance" "argocd" {
   }
   argocd_cm = {
     "accounts.admin" = "login"
+    "resource.customizations.actions.argoproj.io_ApplicationSet" = <<-EOT
+      discovery.lua: |
+        actions = {}
+        actions["refresh"] = {}
+        return actions
+      definitions:
+        - name: refresh
+          action.lua: |
+            local os = require("os")
+            if obj.metadata.annotations == nil then
+                obj.metadata.annotations = {}
+            end
+            obj.metadata.annotations["akuity.io/refreshedAt"] = os.date("!%Y-%m-%dT%XZ")
+            return obj
+    EOT
   }
   argocd_secret = {
     "admin.password" = bcrypt(var.admin_password)
