@@ -106,6 +106,7 @@ register-cluster:
 	          apps/team-daniel/env/prod-$(CLUSTER_NAME)/ && \
 	  git commit -m "feat(kargo): add prod-$(CLUSTER_NAME) stage and env"
 	@echo ""
+	@echo ""
 	@echo "  Platform repo committed. Push e2e-platform when ready, then run 'make infra'."
 	@echo ""
 

@@ -43,6 +43,19 @@ resource "akp_cluster" "this" {
   ensure_healthy = true
 }
 
+# Re-apply the fleet label via the ArgoCD CLI so the cluster secret is updated
+# immediately and fleet ApplicationSet generators detect the cluster without a
+# manual label toggle workaround.
+resource "terraform_data" "fleet_label_sync" {
+  triggers_replace = [akp_cluster.this.id]
+
+  provisioner "local-exec" {
+    command = "argocd cluster set ${var.name} --label fleet=true 2>/dev/null || true"
+  }
+
+  depends_on = [akp_cluster.this]
+}
+
 # Register Kargo agent — self-hosted, runs inside this cluster.
 # remote_argocd links Kargo promotions to ArgoCD syncs.
 resource "akp_kargo_agent" "this" {
