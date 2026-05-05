@@ -56,6 +56,16 @@ kargo-creds:
 	@test -n "$(GITHUB_TOKEN)"          || (echo "ERROR: GITHUB_TOKEN is not set"; exit 1)
 	@test -n "$(TF_VAR_admin_password)" || (echo "ERROR: TF_VAR_admin_password is not set"; exit 1)
 	kargo login "$(KARGO_SERVER)" --admin --password "$(TF_VAR_admin_password)"
+	@printf 'apiVersion: v1\nkind: Secret\nmetadata:\n  name: terraform-runner-token\n  namespace: akuity\n  annotations:\n    kubernetes.io/service-account.name: kargo-controller\ntype: kubernetes.io/service-account-token\n' \
+	  | KUBECONFIG=$(KUBECONFIGS_DIR)/$(CLUSTER_NAME).yaml kubectl apply -f - 2>/dev/null || true
+	@sleep 3
+	@K8S_TOKEN=$$(KUBECONFIG=$(KUBECONFIGS_DIR)/$(CLUSTER_NAME).yaml \
+	  kubectl get secret terraform-runner-token -n akuity \
+	  -o jsonpath='{.data.token}' | base64 -d) && \
+	kargo delete generic-credentials k8s-tf-creds --shared 2>/dev/null || true && \
+	kargo create generic-credentials k8s-tf-creds \
+	  --shared \
+	  --set token=$$K8S_TOKEN
 	kargo create repo-credentials github-dhpup \
 	  --shared \
 	  --git \
