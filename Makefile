@@ -66,9 +66,9 @@ kargo-creds:
 	  2>/dev/null || echo "  (github-dhpup credentials already exist, skipping)"
 	@ARGOCD_TOKEN=$$(argocd account generate-token --account admin) && \
 	kargo delete generic-credentials argocd-refresh-token \
-	  --project=team-daniel 2>/dev/null || true && \
+	  --shared 2>/dev/null || true && \
 	kargo create generic-credentials argocd-refresh-token \
-	  --project=team-daniel \
+	  --shared \
 	  --set url=https://$(ARGOCD_SERVER) \
 	  --set token=$$ARGOCD_TOKEN
 
