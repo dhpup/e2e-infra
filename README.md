@@ -54,7 +54,8 @@ make kargo-creds
 
 This creates:
 1. A shared Git credential for pushing promotion commits to GitHub
-2. A `argocd-refresh-token` generic credential in the `team-daniel` Kargo project — used by the `pipeline-refresh` stage to auto-refresh ArgoCD when new stages are added to the pipeline
+2. A long-lived SA token (`terraform-runner-token`) in the `akuity` namespace, stored as a shared `k8s-tf-creds` credential — used by the `tf-apply` promotion step to authenticate against the in-cluster Kubernetes API without relying on automounted SA token files
+3. A shared `argocd-refresh-token` credential — used by the `pipeline-refresh` Kargo stage to auto-refresh ArgoCD when pipeline config changes (accessed via `sharedSecret()` in promotion templates)
 
 ## Fleet management
 
@@ -72,6 +73,8 @@ make infra
 ```
 
 `register-cluster` automatically updates `terraform.tfvars`, `stages.yaml`, `project.yaml`, and copies the env directory template — no manual file editing needed.
+
+`make infra` also re-applies the `fleet=true` label to newly registered clusters via the ArgoCD CLI so fleet ApplicationSet generators detect them immediately without a manual label toggle.
 
 ### Remove a cluster (demo reset)
 
