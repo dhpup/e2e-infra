@@ -25,7 +25,7 @@ def _add(m):
     sep   = ", " if inner else ""
     return m.group(1) + inner + sep + f'"{cluster}"' + m.group(3)
 
-txt = re.sub(r'(clusters\s*=\s*\[)([^\]]*?)(\])', _add, txt)
+txt = re.sub(r'^(clusters\s*=\s*\[)([^\]]*?)(\])', _add, txt, flags=re.MULTILINE)
 open(tfvars, "w").write(txt)
 print(f"  ✓ terraform.tfvars: added {cluster}")
 
