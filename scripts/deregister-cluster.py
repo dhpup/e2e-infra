@@ -17,11 +17,17 @@ platform = os.path.abspath(sys.argv[2])
 
 tfvars = "bootstrap/terraform.tfvars"
 txt = open(tfvars).read()
-txt = re.sub(r',\s*"' + re.escape(cluster) + '"', '', txt)    # trailing entry
-txt = re.sub(r'"' + re.escape(cluster) + '"\s*,\s*', '', txt)  # leading entry
-txt = re.sub(r'"' + re.escape(cluster) + '"', '', txt)          # only entry
+
+def _remove(txt, name):
+    txt = re.sub(r',\s*"' + re.escape(name) + '"', '', txt)    # trailing entry
+    txt = re.sub(r'"' + re.escape(name) + '"\s*,\s*', '', txt)  # leading entry
+    txt = re.sub(r'"' + re.escape(name) + '"', '', txt)          # only entry
+    return txt
+
+txt = _remove(txt, cluster)  # clusters list
+txt = _remove(txt, cluster)  # fleet_clusters list (same pattern)
 open(tfvars, "w").write(txt)
-print(f"  ✓ terraform.tfvars: removed {cluster}")
+print(f"  ✓ terraform.tfvars: removed {cluster} from clusters and fleet_clusters")
 
 # ── 2. env directory ──────────────────────────────────────────────────────────
 

@@ -109,6 +109,7 @@ module "cluster" {
   kustomization_path = "${path.module}/templates/kustomization.yaml"
   argocd_instance_id = akp_instance.argocd.id
   kargo_instance_id  = akp_kargo_instance.kargo.id
+  fleet_enabled      = contains(var.fleet_clusters, each.key)
 
   depends_on = [akp_instance.argocd, akp_kargo_instance.kargo]
 }

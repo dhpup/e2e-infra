@@ -30,9 +30,7 @@ resource "akp_cluster" "this" {
   instance_id = var.argocd_instance_id
   name        = var.name
   namespace   = "akuity"
-  labels = {
-    fleet = "true"
-  }
+  labels      = var.fleet_enabled ? { fleet = "true" } : {}
   spec = {
     data = {
       size          = "small"
@@ -41,19 +39,6 @@ resource "akp_cluster" "this" {
   }
   kube_config    = local.kube_config
   ensure_healthy = true
-}
-
-# Re-apply the fleet label via the ArgoCD CLI so the cluster secret is updated
-# immediately and fleet ApplicationSet generators detect the cluster without a
-# manual label toggle workaround.
-resource "terraform_data" "fleet_label_sync" {
-  triggers_replace = [akp_cluster.this.id]
-
-  provisioner "local-exec" {
-    command = "argocd cluster set ${var.name} --label fleet=true 2>/dev/null || true"
-  }
-
-  depends_on = [akp_cluster.this]
 }
 
 # Register Kargo agent — self-hosted, runs inside this cluster.

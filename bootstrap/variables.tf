@@ -43,6 +43,17 @@ variable "default_shard" {
   default     = "demo1"
 }
 
+variable "fleet_clusters" {
+  description = <<-EOT
+    Subset of var.clusters that should receive the fleet=true label, enabling
+    ArgoCD ApplicationSet addon deployment. Add a cluster here only after
+    confirming its Akuity agent is healthy (run `make infra` first without it,
+    then `make enable-fleet CLUSTER_NAME=<name>`).
+  EOT
+  type        = set(string)
+  default     = []
+}
+
 variable "admin_password" {
   description = "Admin password for both ArgoCD and Kargo"
   type        = string

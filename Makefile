@@ -7,7 +7,7 @@ KARGO_SERVER      ?= $(shell cd $(TF_DIR) && terraform output -raw kargo_url 2>/
 PLATFORM_REPO_URL  ?= https://github.com/dhpup/e2e-platform
 PLATFORM_REPO_PATH ?= ../e2e-platform
 
-.PHONY: all cluster kubeconfig infra bootstrap-apps kargo-creds add-cluster register-cluster remove-cluster destroy destroy-infra destroy-cluster
+.PHONY: all cluster kubeconfig infra bootstrap-apps kargo-creds add-cluster register-cluster enable-fleet remove-cluster destroy destroy-infra destroy-cluster
 
 ## Full initial bootstrap: create first cluster, write kubeconfig, apply Terraform
 all: cluster kubeconfig infra
@@ -95,7 +95,9 @@ add-cluster:
 
 ## Wire an existing cluster into the GitOps pipeline — step 2 of adding a fleet cluster.
 ## Updates terraform.tfvars, stages.yaml, project.yaml, copies the env dir,
-## commits the platform repo, and applies Terraform.
+## commits the platform repo, and applies Terraform. The cluster is registered
+## WITHOUT the fleet=true label so ArgoCD addon ApplicationSets don't fire until
+## the agent is confirmed healthy.
 ## Usage: make register-cluster CLUSTER_NAME=demo2
 register-cluster:
 	@echo "Registering $(CLUSTER_NAME) in platform repo..."
@@ -106,8 +108,20 @@ register-cluster:
 	          apps/team-daniel/env/prod-$(CLUSTER_NAME)/ && \
 	  git commit -m "feat(kargo): add prod-$(CLUSTER_NAME) stage and env"
 	@echo ""
-	@echo ""
 	@echo "  Platform repo committed. Push e2e-platform when ready, then run 'make infra'."
+	@echo "  Once the agent shows healthy, run 'make enable-fleet CLUSTER_NAME=$(CLUSTER_NAME)'."
+	@echo ""
+
+## Apply the fleet=true label to a healthy cluster — step 3 of adding a fleet cluster.
+## Only run this after `make infra` confirms the Akuity agent is connected and healthy.
+## Adds the cluster to fleet_clusters in terraform.tfvars and re-applies Terraform,
+## which triggers ArgoCD addon ApplicationSets to pick up the cluster.
+## Usage: make enable-fleet CLUSTER_NAME=demo2
+enable-fleet:
+	@python3 scripts/enable-fleet.py $(CLUSTER_NAME)
+	$(MAKE) infra
+	@echo ""
+	@echo "  fleet=true applied to '$(CLUSTER_NAME)'. ArgoCD will now deploy addons."
 	@echo ""
 
 ## Remove a cluster from the fleet pipeline and destroy it — full demo reset.

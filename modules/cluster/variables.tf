@@ -22,3 +22,9 @@ variable "kustomization_path" {
   description = "Path to kustomization.yaml applied to agent manifests (e.g. to reduce CPU requests)"
   type        = string
 }
+
+variable "fleet_enabled" {
+  description = "When true, adds fleet=true label so ArgoCD ApplicationSets pick up this cluster for addon deployment"
+  type        = bool
+  default     = false
+}
