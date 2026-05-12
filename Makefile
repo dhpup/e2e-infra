@@ -7,7 +7,7 @@ KARGO_SERVER      ?= $(shell cd $(TF_DIR) && terraform output -raw kargo_url 2>/
 PLATFORM_REPO_URL  ?= https://github.com/dhpup/e2e-platform
 PLATFORM_REPO_PATH ?= ../e2e-platform
 
-.PHONY: all cluster kubeconfig infra bootstrap-apps kargo-creds add-cluster register-cluster enable-fleet remove-cluster destroy destroy-infra destroy-cluster
+.PHONY: all cluster kubeconfig infra bootstrap-apps kargo-creds add-cluster add-cluster-with-fleet register-cluster enable-fleet remove-cluster destroy destroy-infra destroy-cluster
 
 ## Full initial bootstrap: create first cluster, write kubeconfig, apply Terraform
 all: cluster kubeconfig infra
@@ -92,6 +92,26 @@ add-cluster:
 	@echo "  Cluster '$(CLUSTER_NAME)' is ready."
 	@echo "  Run 'make register-cluster CLUSTER_NAME=$(CLUSTER_NAME)' to wire it into the pipeline."
 	@echo ""
+
+## Full cluster onboarding in one shot — registers cluster and enables fleet in a single Terraform run.
+## Mirrors the pre-refactor add-cluster: both scripts run before infra so fleet=true lands immediately.
+## Usage: make add-cluster-with-fleet CLUSTER_NAME=demo2
+add-cluster-with-fleet:
+	$(MAKE) cluster CLUSTER_NAME=$(CLUSTER_NAME)
+	$(MAKE) kubeconfig CLUSTER_NAME=$(CLUSTER_NAME)
+	@echo "Registering $(CLUSTER_NAME) in platform repo..."
+	@python3 scripts/register-cluster.py $(CLUSTER_NAME) $(PLATFORM_REPO_PATH)
+	@python3 scripts/enable-fleet.py $(CLUSTER_NAME)
+	@cd $(PLATFORM_REPO_PATH) && \
+	  git add apps/team-daniel/kargo/stages.yaml \
+	          apps/team-daniel/kargo/project.yaml \
+	          apps/team-daniel/env/prod-$(CLUSTER_NAME)/ && \
+	  git commit -m "feat(kargo): add prod-$(CLUSTER_NAME) stage and env"
+	@echo ""
+	@echo "  Platform repo committed. Push e2e-platform when ready."
+	@echo "  Running terraform to register cluster with Akuity..."
+	@echo ""
+	$(MAKE) infra
 
 ## Wire an existing cluster into the GitOps pipeline — step 2 of adding a fleet cluster.
 ## Updates terraform.tfvars, stages.yaml, project.yaml, copies the env dir,
